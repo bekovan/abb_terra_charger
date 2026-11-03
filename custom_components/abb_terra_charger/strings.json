@@ -1,0 +1,18 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "ABB Terra Charger",
+        "description": "Set up your ABB Terra Charger",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "unit_id": "Unit ID"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to the charger. Check the host, port and unit ID, and that Modbus TCP is enabled."
+    }
+  }
+}

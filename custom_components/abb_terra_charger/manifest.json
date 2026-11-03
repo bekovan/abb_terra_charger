@@ -1,0 +1,11 @@
+{
+  "domain": "abb_terra_charger",
+  "name": "ABB Terra Charger",
+  "codeowners": ["@bekovan"],
+  "config_flow": true,
+  "dependencies": ["modbus"],
+  "documentation": "https://github.com/bekovan/ABB-Terra-AC",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "version": "1.0.0"
+}
