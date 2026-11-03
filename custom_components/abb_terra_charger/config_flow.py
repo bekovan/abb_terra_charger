@@ -47,8 +47,8 @@ class TerraChargerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         schema = probatio.Schema(
             {
-                probatio.Required(CONF_HOST, default="192.168.3.71"): str,
-                probatio.Required(CONF_PORT, default=503): int,
+                probatio.Required(CONF_HOST, default="192.168.x.x"): str,
+                probatio.Required(CONF_PORT, default=502): int,
                 probatio.Required(CONF_UNIT_ID, default=1): int,
             }
         )
