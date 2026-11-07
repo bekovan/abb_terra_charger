@@ -1,7 +1,9 @@
 {
   "name": "ABB Terra Charger",
   "content_in_root": false,
+  "filename": "abb_terra_charger.zip",
   "hide_default_branch": true,
   "homeassistant": "2026.11.0",
-  "render_readme": true
+  "render_readme": true,
+  "zip_release": true
 }
