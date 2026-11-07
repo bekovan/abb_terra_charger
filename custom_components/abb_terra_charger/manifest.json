@@ -5,6 +5,7 @@
   "config_flow": true,
   "dependencies": ["modbus"],
   "documentation": "https://github.com/bekovan/ABB-Terra-charger",
+  "issue_tracker": "https://github.com/bekovan/abb_terra_charger/issues",
   "integration_type": "device",
   "iot_class": "local_polling",
   "version": "1.0.0"
