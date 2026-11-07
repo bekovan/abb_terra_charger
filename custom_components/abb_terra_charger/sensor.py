@@ -12,8 +12,9 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfPower,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.restore_state import ExtraStoredData, RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
@@ -42,6 +43,22 @@ CHARGER_STATE_MAP = {
     133: "Paused",
     5: "Other",
 }
+
+
+def _device_info(coordinator: TerraDataUpdateCoordinator) -> dict:
+    """Return the device information shared by the charger entities."""
+    return {
+        "identifiers": {(DOMAIN, coordinator.config_entry.entry_id)},
+        "name": "ABB Terra Charger",
+        "manufacturer": "ABB",
+        "model": "Terra Charger",
+        "sw_version": (
+            coordinator.data.readings.firmware_version if coordinator.data else None
+        ),
+        "serial_number": (
+            coordinator.data.readings.serial_number if coordinator.data else None
+        ),
+    }
 
 
 async def async_setup_entry(
@@ -150,13 +167,10 @@ async def async_setup_entry(
                 UnitOfPower.WATT,
                 0,
             ),
-            TerraSensor(
+            TerraEnergySensor(
                 coordinator,
                 "Energy Delivered",
                 "energy_delivered",
-                SensorDeviceClass.ENERGY,
-                UnitOfEnergy.WATT_HOUR,
-                0,
             ),
             TerraSensor(
                 coordinator,
@@ -194,18 +208,7 @@ class TerraSensor(CoordinatorEntity[TerraDataUpdateCoordinator], SensorEntity):
         self._attr_suggested_display_precision = precision
         self._attr_state_class = state_class
         self._attr_unique_id = f"{coordinator.config_entry.entry_id}_{attribute}"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, coordinator.config_entry.entry_id)},
-            "name": "ABB Terra Charger",
-            "manufacturer": "ABB",
-            "model": "Terra Charger",
-            "sw_version": (
-                coordinator.data.readings.firmware_version if coordinator.data else None
-            ),
-            "serial_number": (
-                coordinator.data.readings.serial_number if coordinator.data else None
-            ),
-        }
+        self._attr_device_info = _device_info(coordinator)
         if attribute == "charging_state":
             self._attr_options = CHARGER_STATE_OPTIONS
 
@@ -224,3 +227,94 @@ class TerraSensor(CoordinatorEntity[TerraDataUpdateCoordinator], SensorEntity):
                     return CHARGER_STATE_OPTIONS[state]
                 return "Other"
         return value
+
+
+class _EnergyRestoreData(ExtraStoredData):
+    """Persisted state for the cumulative energy sensor."""
+
+    def __init__(self, total: float | None, session: float | None) -> None:
+        """Initialize the stored state."""
+        self.total = total
+        self.session = session
+
+    def as_dict(self) -> dict[str, float | None]:
+        """Return the state as a JSON-serializable dict."""
+        return {"total": self.total, "session": self.session}
+
+
+class TerraEnergySensor(
+    CoordinatorEntity[TerraDataUpdateCoordinator], SensorEntity, RestoreEntity
+):
+    """Cumulative energy delivered across charging sessions.
+
+    The charger only reports the energy of the current session (register 401Eh),
+    which it resets to zero for every new session. Keep a running total instead
+    and persist it, so the value keeps increasing across sessions and restarts.
+    """
+
+    _attr_has_entity_name = True
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_native_unit_of_measurement = UnitOfEnergy.WATT_HOUR
+    _attr_suggested_display_precision = 0
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+
+    def __init__(
+        self,
+        coordinator: TerraDataUpdateCoordinator,
+        name: str,
+        attribute: str,
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._attribute = attribute
+        self._attr_name = name
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_{attribute}"
+        self._attr_device_info = _device_info(coordinator)
+        self._total_energy: float | None = None
+        self._last_session_energy: float | None = None
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the running total and the last session reading."""
+        await super().async_added_to_hass()
+        if (restored := await self.async_get_last_extra_data()) is not None:
+            data = restored.as_dict()
+            if data.get("total") is not None:
+                self._total_energy = float(data["total"])
+            if data.get("session") is not None:
+                self._last_session_energy = float(data["session"])
+        if self.coordinator.data is not None:
+            self._update_total()
+            self.async_write_ha_state()
+
+    @property
+    def extra_restore_state_data(self) -> ExtraStoredData:
+        """Return the state to persist across restarts."""
+        return _EnergyRestoreData(self._total_energy, self._last_session_energy)
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the cumulative energy delivered."""
+        return self._total_energy
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Accumulate the latest session reading."""
+        self._update_total()
+        super()._handle_coordinator_update()
+
+    def _update_total(self) -> None:
+        """Add the session delta to the running total."""
+        if self.coordinator.data is None:
+            return
+        raw = float(self.coordinator.data.readings.energy_delivered)
+        total = self._total_energy or 0.0
+        if self._last_session_energy is None:
+            # First reading: start the total at the current session value.
+            if self._total_energy is None:
+                self._total_energy = raw
+        elif raw >= self._last_session_energy:
+            self._total_energy = total + (raw - self._last_session_energy)
+        else:
+            # The charger zeroed the session register for a new session.
+            self._total_energy = total + raw
+        self._last_session_energy = raw
