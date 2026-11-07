@@ -1,6 +1,7 @@
 {
   "domain": "abb_terra_charger",
   "name": "ABB Terra Charger",
+  "categories": ["energy.ev_charging"],
   "codeowners": ["@bekovan"],
   "config_flow": true,
   "dependencies": ["modbus"],
