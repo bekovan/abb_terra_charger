@@ -1,8 +1,8 @@
 # ABB Terra Charger
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
-[![GitHub Release](https://img.shields.io/github/v/release/bekovan/ABB-Terra-AC?sort=semver)](https://github.com/bekovan/ABB-Terra-AC/releases)
-[![License: MIT](https://img.shields.io/github/license/bekovan/ABB-Terra-AC.svg)](LICENSE)
+[![GitHub Release](https://img.shields.io/github/v/release/bekovan/ABB-Terra-charger?sort=semver)](https://github.com/bekovan/ABB-Terra-charger/releases)
+[![License: MIT](https://img.shields.io/github/license/bekovan/ABB-Terra-charger.svg)](LICENSE)
 
 A Home Assistant custom integration for ABB Terra AC wallboxes, talking to the
 charger over Modbus TCP. Exposes live charging telemetry, a charging current
@@ -34,7 +34,7 @@ limit and start/stop controls as native Home Assistant entities.
 ### HACS (custom repository)
 
 1. HACS → **Integrations** → ⋮ → **Custom repositories**
-2. Add `https://github.com/bekovan/ABB-Terra-AC` with category **Integration**
+2. Add `https://github.com/bekovan/ABB-Terra-charger` with category **Integration**
 3. Install **ABB Terra Charger** and restart Home Assistant
 
 Releases are published as the zip asset `abb_terra_charger.zip`; HACS installs
