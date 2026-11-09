@@ -1,7 +1,7 @@
 # ABB Terra Charger
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
-[![GitHub Release](https://img.shields.io/github/v/release/bekovan/abb_terra_charger?sort=semver)](https://github.com/bekovan/ABB-Terra-charger/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/bekovan/abb_terra_charger?sort=semver)](https://github.com/bekovan/abb_terra_charger/releases)
 [![License: MIT](https://img.shields.io/github/license/bekovan/abb_terra_charger.svg)](LICENSE)
 
 A Home Assistant custom integration for ABB Terra AC wallboxes, talking to the
