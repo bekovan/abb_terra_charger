@@ -77,6 +77,7 @@ class TerraSettings:
     def __init__(self) -> None:
         """Initialize the default settings for a charger."""
         self.current_limit: float = 0.0
+        self.fallback_limit: float = 0.0
 
 
 class TerraCharger:
@@ -199,7 +200,9 @@ class TerraCharger:
             report.failed["readings"] = err
 
         try:
-            h_regs = await self.unit.read_holding_registers(address=16640, count=2)
+            # 16640 (4100h) is write-only; read the setpoint back from
+            # 16418 (4022h), which mirrors what was written to 4100h.
+            h_regs = await self.unit.read_holding_registers(address=16418, count=2)
             if h_regs:
                 raw_limit = struct.unpack(
                     ">I", struct.pack(">HH", h_regs[0], h_regs[1])
@@ -215,6 +218,23 @@ class TerraCharger:
             struct.error,
         ) as err:
             report.failed["settings"] = err
+
+        try:
+            # Fallback current limit readback: 16420 (4024h), single register.
+            # The setpoint at 16649 (4109h) is write-only, so it cannot be read
+            # back directly.
+            fb_regs = await self.unit.read_holding_registers(address=16420, count=1)
+            if fb_regs:
+                self.settings.fallback_limit = float(fb_regs[0])
+        except (
+            ModbusError,
+            TimeoutError,
+            OSError,
+            ValueError,
+            TypeError,
+            IndexError,
+        ) as err:
+            report.failed["fallback_limit"] = err
 
         return report
 
@@ -249,6 +269,44 @@ class TerraCharger:
             )
 
         self.settings.current_limit = amps
+
+    async def async_write_fallback_limit(self, amps: float) -> None:
+        """Set the fallback current limit in amps.
+
+        The charger applies this current when it loses the smart meter link.
+        A value of 0 makes it pause instead of drawing power.
+
+        Args:
+            amps: Target fallback current in amperes.
+        """
+        value = int(amps)
+
+        if hasattr(self.unit, "write_register"):
+            try:
+                await self.unit.write_register(address=16649, value=value)
+            except TypeError:
+                await self.unit.write_register(16649, value)
+        elif hasattr(self.unit, "async_write_register"):
+            try:
+                await self.unit.async_write_register(address=16649, value=value)
+            except TypeError:
+                await self.unit.async_write_register(16649, value)
+        elif hasattr(self.unit, "write_holding_registers"):
+            try:
+                await self.unit.write_holding_registers(address=16649, values=[value])
+            except TypeError:
+                await self.unit.write_holding_registers(16649, [value])
+        elif hasattr(self.unit, "async_write_holding_registers"):
+            try:
+                await self.unit.async_write_holding_registers(
+                    address=16649, values=[value]
+                )
+            except TypeError:
+                await self.unit.async_write_holding_registers(16649, [value])
+        else:
+            raise AttributeError(f"No suitable write method on unit: {type(self.unit)}")
+
+        self.settings.fallback_limit = float(value)
 
     async def async_start_charging(self) -> None:
         """Start charging by writing the start command to the charger."""

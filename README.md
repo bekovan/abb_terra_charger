@@ -116,6 +116,7 @@ existing entity IDs.
 | Entity | Range | Unit | Notes |
 |---|---|---|---|
 | Charging Current Limit | 0–32 | A | Sets the charging current limit |
+| Fallback Current Limit | 0–32 | A | Current applied when the charger loses the smart meter link; `0` pauses instead of charging |
 
 ### Buttons
 

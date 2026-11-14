@@ -5,7 +5,7 @@
   "codeowners": ["@bekovan"],
   "config_flow": true,
   "dependencies": ["modbus"],
-  "documentation": "https://github.com/bekovan/ABB-Terra-charger",
+  "documentation": "https://github.com/bekovan/abb_terra_charger",
   "integration_type": "device",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/bekovan/abb_terra_charger/issues",
